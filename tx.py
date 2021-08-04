@@ -105,6 +105,25 @@ class Point:
   def on_curve(self, curve: Curve) -> bool:
     return (self.y ** 2 - self.x ** 3 - 7) % curve.p == 0
 
+# **** hash.py ****
+
+def ripemd160(x):
+  h = hashlib.new('ripemd160')
+  h.update(x)
+  return h.digest()
+
+def sha256(x):
+  return hashlib.sha256(x).digest()
+
+def checksum(x):
+  return sha256(sha256(x))[:4]
+
+def b58wchecksum(x):
+  return base58.b58encode(x + checksum(x))
+
+def b58(x):
+  return base58.b58encode(x)
+
 # **** generator.py ****
 
 @dataclass
@@ -134,14 +153,13 @@ class PublicKey(Point):
       ret = (b'\x02', b'\x03')[self.y & 1] + self.x.to_bytes(32, 'big')
     else:
       ret = b'\x04' + self.x.to_bytes(32, 'big') + self.y.to_bytes(32, 'big')
-    return hashlib.new('ripemd160', hashlib.new('sha256', ret).digest()).digest() if hash160 else ret
+    return ripemd160(sha256(ret)) if hash160 else ret
 
   def addr(self, net: str, compressed: bool) -> str:
-    hash         = self.encode(compressed = compressed, hash160 = True)
-    hash_version = { 'main': b'\x00', 'test': b'\x6f' }[net] + hash
-    checksum     = hashlib.new('sha256', hashlib.new('sha256', hash_version).digest()).digest()[:4]
-    byte_addr    = hash_version + checksum
-    return base58.b58encode(byte_addr)
+    # get the associated address with this public key
+    version = { 'main': b'\x00', 'test': b'\x6f' }[net]
+    hash    = version + self.encode(compressed = compressed, hash160 = True)
+    return b58wchecksum(hash)
 
 
 # **** script.py ****
@@ -200,7 +218,7 @@ def sign(seekrit: int, msg: bytes, gen: Generator) -> Signature:
   # note: using rand to generate the sk is bad
   sk = random.randrange(1, gen.n)
   r  = (sk * gen.G).x
-  s  = pow(sk, -1, gen.n) * (int.from_bytes(hashlib.new('sha256', hashlib.new('sha256', msg).digest()).digest(), 'big') + seekrit * r) % gen.n
+  s  = pow(sk, -1, gen.n) * (int.from_bytes(sha256(sha256(msg)), 'big') + seekrit * r) % gen.n
   if s > gen.n / 2:
     s = gen.n - s
   sig = Signature(r, s)
@@ -281,7 +299,7 @@ class Tx:
   @property
   def id(self) -> str:
     # returns this transactions ID
-    return hashlib.new('sha256', hashlib.new('sha256', self.encode()).digest()).digest()[::-1].hex()
+    return sha256(sha256(self.encode()))[::-1].hex()
 
   def encode(self, sig_idx = -1) -> bytes:
     # encode this tx as bytes

@@ -1,7 +1,8 @@
-import hashlib
 import random
 from dataclasses import dataclass
+
 from generator import Generator
+from hash import sha256
 from point import Point
 
 # basically just two functions:
@@ -36,7 +37,7 @@ def sign(seekrit: int, msg: bytes, gen: Generator) -> Signature:
   # note: using rand to generate the sk is bad
   sk = random.randrange(1, gen.n)
   r  = (sk * gen.G).x
-  s  = pow(sk, -1, gen.n) * (int.from_bytes(hashlib.new('sha256', hashlib.new('sha256', msg).digest()).digest(), 'big') + seekrit * r) % gen.n
+  s  = pow(sk, -1, gen.n) * (int.from_bytes(sha256(sha256(msg)), 'big') + seekrit * r) % gen.n
   if s > gen.n / 2:
     s = gen.n - s
   sig = Signature(r, s)

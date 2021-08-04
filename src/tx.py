@@ -4,6 +4,7 @@ from typing import List
 
 from encode import encode_int, encode_varint
 from script import Script
+from hash import sha256
 
 @dataclass
 class TxIn:
@@ -73,7 +74,7 @@ class Tx:
   @property
   def id(self) -> str:
     # returns this transactions ID
-    return hashlib.new('sha256', hashlib.new('sha256', self.encode()).digest()).digest()[::-1].hex()
+    return sha256(sha256(self.encode()))[::-1].hex()
 
   def encode(self, sig_idx = -1) -> bytes:
     # encode this tx as bytes
