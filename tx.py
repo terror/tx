@@ -25,6 +25,13 @@ def encode_varint(i) -> bytes:
   else:
     raise ValueError(f'integer too large! {i}')
 
+# **** constants.py ****
+
+OP_DUP         = 118
+OP_HASH160     = 169
+OP_EQUALVERIFY = 136
+OP_CHECKSIG    = 172
+
 # **** curve.py ****
 
 @dataclass
@@ -305,14 +312,18 @@ def main():
   # send out 50k sats
   tx_out1 = TxOut.new(
     50000,
-    Script([118, 169, PublicKey.from_point(b_pk).encode(compressed=True, hash160=True), 136, 172])
+    Script(
+      [OP_DUP, OP_HASH160, PublicKey.from_point(b_pk).encode(compressed=True, hash160=True), OP_EQUALVERIFY, OP_CHECKSIG]
+    )
   )
 
   # second output will go back to us (change)
   # the diff is the miners fee
   tx_out2 = TxOut.new(
     47500,
-    Script([118, 169, PublicKey.from_point(a_pk).encode(compressed=True, hash160=True), 136, 172])
+    Script(
+      [OP_DUP, OP_HASH160, PublicKey.from_point(a_pk).encode(compressed=True, hash160=True), OP_EQUALVERIFY, OP_CHECKSIG]
+    )
   )
 
   print('\nOutput 1 script:')
