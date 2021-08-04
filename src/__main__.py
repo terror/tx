@@ -41,9 +41,8 @@ def main():
   tx_in = TxIn.new()
 
   # TODO: wtf?
-  source_script = Script([OP_DUP, OP_HASH160, PublicKey.from_point(b_pk).encode(compressed=True, hash160=True),
-    OP_EQUALVERIFY, OP_CHECKSIG])
-  tx_in.prev_tx_script_pk = source_script
+  src = Script([OP_DUP, OP_HASH160, PublicKey.from_point(b_pk).encode(compressed=True, hash160=True), OP_EQUALVERIFY, OP_CHECKSIG])
+  tx_in.prev_tx_script_pk = src
 
   # first output will go to the second wallet
   # send out 50k sats
@@ -89,10 +88,14 @@ def main():
   script_sig       = Script([sig_bytes_at, pk_bytes])
   tx_in.script_sig = script_sig
 
-  print('\nTX ID:')
+  print('\n**** TX ID ****')
   print(tx.id)
-  print('\nTX encoded:')
+  print('\n**** Raw TX (SEND!) ****')
   print(tx.encode().hex())
+
+  # TODO: fix bug
+  # TODO: implement simple btc client to broadcast this tx
+  # for now just use: https://blockstream.info/testnet/tx/push
 
 if __name__ == '__main__':
   main()

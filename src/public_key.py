@@ -18,7 +18,7 @@ class PublicKey(Point):
     return ripemd160(sha256(ret)) if hash160 else ret
 
   def addr(self, net: str, compressed: bool) -> str:
-    # get the associated address with this public key
+    # get this public key's associated address
     version = { 'main': b'\x00', 'test': b'\x6f' }[net]
     hash    = version + self.encode(compressed = compressed, hash160 = True)
     return b58wchecksum(hash)

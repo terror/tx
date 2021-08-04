@@ -48,7 +48,10 @@ class TxIn:
 class TxOut:
   # need to specify amount we want to spend (in satoshis),
   # the amount we want to get back (change, diff is miners fee)
-  # and the bitcoin script associated with the output
+  # and the locking script associated with the output
+  #
+  # note: the locking script essentially specifies under what
+  # conditions this output can be spent in the future
   amount: int
   s_pk:   Script = None
 

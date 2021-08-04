@@ -156,7 +156,7 @@ class PublicKey(Point):
     return ripemd160(sha256(ret)) if hash160 else ret
 
   def addr(self, net: str, compressed: bool) -> str:
-    # get the associated address with this public key
+    # get this public key's associated address
     version = { 'main': b'\x00', 'test': b'\x6f' }[net]
     hash    = version + self.encode(compressed = compressed, hash160 = True)
     return b58wchecksum(hash)
@@ -221,8 +221,7 @@ def sign(seekrit: int, msg: bytes, gen: Generator) -> Signature:
   s  = pow(sk, -1, gen.n) * (int.from_bytes(sha256(sha256(msg)), 'big') + seekrit * r) % gen.n
   if s > gen.n / 2:
     s = gen.n - s
-  sig = Signature(r, s)
-  return sig
+  return Signature(r, s)
 
 def ver(pk: Point, msg: bytes, sig: Signature) -> bool:
   # don't really need this as we're only creating a tx
@@ -273,7 +272,10 @@ class TxIn:
 class TxOut:
   # need to specify amount we want to spend (in satoshis),
   # the amount we want to get back (change, diff is miners fee)
-  # and the bitcoin script associated with the output
+  # and the locking script associated with the output
+  #
+  # note: the locking script essentially specifies under what
+  # conditions this output can be spent in the future
   amount: int
   s_pk:   Script = None
 
@@ -355,9 +357,8 @@ def main():
   tx_in = TxIn.new()
 
   # TODO: wtf?
-  source_script = Script([OP_DUP, OP_HASH160, PublicKey.from_point(b_pk).encode(compressed=True, hash160=True),
-    OP_EQUALVERIFY, OP_CHECKSIG])
-  tx_in.prev_tx_script_pk = source_script
+  src = Script([OP_DUP, OP_HASH160, PublicKey.from_point(b_pk).encode(compressed=True, hash160=True), OP_EQUALVERIFY, OP_CHECKSIG])
+  tx_in.prev_tx_script_pk = src
 
   # first output will go to the second wallet
   # send out 50k sats
@@ -403,10 +404,14 @@ def main():
   script_sig       = Script([sig_bytes_at, pk_bytes])
   tx_in.script_sig = script_sig
 
-  print('\nTX ID:')
+  print('\n**** TX ID ****')
   print(tx.id)
-  print('\nTX encoded:')
+  print('\n**** Raw TX (SEND!) ****')
   print(tx.encode().hex())
+
+  # TODO: fix bug
+  # TODO: implement simple btc client to broadcast this tx
+  # for now just use: https://blockstream.info/testnet/tx/push
 
 if __name__ == '__main__':
   main()

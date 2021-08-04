@@ -40,8 +40,7 @@ def sign(seekrit: int, msg: bytes, gen: Generator) -> Signature:
   s  = pow(sk, -1, gen.n) * (int.from_bytes(sha256(sha256(msg)), 'big') + seekrit * r) % gen.n
   if s > gen.n / 2:
     s = gen.n - s
-  sig = Signature(r, s)
-  return sig
+  return Signature(r, s)
 
 def ver(pk: Point, msg: bytes, sig: Signature) -> bool:
   # don't really need this as we're only creating a tx
