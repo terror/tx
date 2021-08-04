@@ -182,10 +182,33 @@ class Signature:
   r: int
   s: int
 
-def sign(seekrit: int, msg: bytes) -> Signature:
-  pass
+  def encode(self) -> bytes:
+    # der encode this signature
+    def der(n):
+      nb = n.to_bytes(32, 'big').lstrip(b'\x00')
+      # prepend 0x00 if first byte >= 0x80??????????????????????????
+      if nb[0] >= 0x80:
+        nb += b'\x00'
+      return nb
+    rb      = der(self.r)
+    sb      = der(self.s)
+    content = b''.join([bytes([0x02, len(rb)]), rb, bytes([0x02, len(sb)]), sb])
+    frame   = b''.join([bytes([0x30, len(content)]), content])
+    return frame
+
+def sign(seekrit: int, msg: bytes, gen: Generator) -> Signature:
+  # note: using rand to generate the sk is bad
+  sk = random.randrange(1, gen.n)
+  r  = (sk * gen.G).x
+  s  = pow(sk, -1, gen.n) * (int.from_bytes(hashlib.new('sha256', hashlib.new('sha256', msg).digest()).digest(), 'big') + seekrit * r) % gen.n
+  if s > gen.n / 2:
+    s = gen.n - s
+  sig = Signature(r, s)
+  return sig
 
 def ver(pk: Point, msg: bytes, sig: Signature) -> bool:
+  # don't really need this as we're only creating a tx
+  # would have to implement this when mining
   pass
 
 # **** tx.py ****
@@ -255,6 +278,11 @@ class Tx:
   version:  int
   locktime: int = 0
 
+  @property
+  def id(self) -> str:
+    # returns this transactions ID
+    return hashlib.new('sha256', hashlib.new('sha256', self.encode()).digest()).digest()[::-1].hex()
+
   def encode(self, sig_idx = -1) -> bytes:
     # encode this tx as bytes
     # start off with encoded metadata
@@ -266,12 +294,12 @@ class Tx:
     if sig_idx == -1:
       ret += [tx_in.encode() for tx_in in self.tx_ins]
     else:
-      ret += [tx_in.encode(script_override=(sig_index == i)) for i, tx_in in enumerate(self.tx_ins)]
+      ret += [tx_in.encode(script_override=(sig_idx == i)) for i, tx_in in enumerate(self.tx_ins)]
 
     ret += [encode_varint(len(self.tx_outs))]
     ret += [tx_out.encode() for tx_out in self.tx_outs]
     ret += [encode_int(self.locktime, 4)]
-    ret += [encode_int(1, 4) if sig_index != -1 else b'']
+    ret += [encode_int(1, 4) if sig_idx != -1 else b'']
 
     return b''.join(ret)
 
@@ -308,6 +336,11 @@ def main():
   # grab a new transaction input (this has hardcoded values)
   tx_in = TxIn.new()
 
+  # TODO: wtf?
+  source_script = Script([OP_DUP, OP_HASH160, PublicKey.from_point(b_pk).encode(compressed=True, hash160=True),
+    OP_EQUALVERIFY, OP_CHECKSIG])
+  tx_in.prev_tx_script_pk = source_script
+
   # first output will go to the second wallet
   # send out 50k sats
   tx_out1 = TxOut.new(
@@ -338,6 +371,24 @@ def main():
     tx_ins  = [tx_in],
     tx_outs = [tx_out1, tx_out2]
   )
+
+  # grab the message we need to sign
+  msg = tx.encode(sig_idx = 0)
+
+  # create our digital signature
+  sig          = sign(a, msg, generator)
+  sig_bytes    = sig.encode()
+  sig_bytes_at = sig_bytes + b'\x01'
+  pk_bytes     = PublicKey.from_point(a_pk).encode(compressed = True, hash160 = False)
+
+  # encode the signature bytes + type and pk bytes in a script
+  script_sig       = Script([sig_bytes_at, pk_bytes])
+  tx_in.script_sig = script_sig
+
+  print('\nTX ID:')
+  print(tx.id)
+  print('\nTX encoded:')
+  print(tx.encode().hex())
 
 if __name__ == '__main__':
   main()

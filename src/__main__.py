@@ -1,12 +1,13 @@
 import random
 
+from constants import *
 from curve import Curve
 from generator import Generator
 from point import Point
 from public_key import PublicKey
 from script import Script
-from tx import TxIn, TxOut
-from constants import *
+from signature import sign
+from tx import Tx, TxIn, TxOut
 
 def main():
   curve     = Curve.new()
@@ -39,6 +40,11 @@ def main():
   # grab a new transaction input (this has hardcoded values)
   tx_in = TxIn.new()
 
+  # TODO: wtf?
+  source_script = Script([OP_DUP, OP_HASH160, PublicKey.from_point(b_pk).encode(compressed=True, hash160=True),
+    OP_EQUALVERIFY, OP_CHECKSIG])
+  tx_in.prev_tx_script_pk = source_script
+
   # first output will go to the second wallet
   # send out 50k sats
   tx_out1 = TxOut.new(
@@ -69,6 +75,24 @@ def main():
     tx_ins  = [tx_in],
     tx_outs = [tx_out1, tx_out2]
   )
+
+  # grab the message we need to sign
+  msg = tx.encode(sig_idx = 0)
+
+  # create our digital signature
+  sig          = sign(a, msg, generator)
+  sig_bytes    = sig.encode()
+  sig_bytes_at = sig_bytes + b'\x01'
+  pk_bytes     = PublicKey.from_point(a_pk).encode(compressed = True, hash160 = False)
+
+  # encode the signature bytes + type and pk bytes in a script
+  script_sig       = Script([sig_bytes_at, pk_bytes])
+  tx_in.script_sig = script_sig
+
+  print('\nTX ID:')
+  print(tx.id)
+  print('\nTX encoded:')
+  print(tx.encode().hex())
 
 if __name__ == '__main__':
   main()

@@ -1,3 +1,4 @@
+import hashlib
 from dataclasses import dataclass
 from typing import List
 
@@ -69,6 +70,11 @@ class Tx:
   version:  int
   locktime: int = 0
 
+  @property
+  def id(self) -> str:
+    # returns this transactions ID
+    return hashlib.new('sha256', hashlib.new('sha256', self.encode()).digest()).digest()[::-1].hex()
+
   def encode(self, sig_idx = -1) -> bytes:
     # encode this tx as bytes
     # start off with encoded metadata
@@ -80,11 +86,11 @@ class Tx:
     if sig_idx == -1:
       ret += [tx_in.encode() for tx_in in self.tx_ins]
     else:
-      ret += [tx_in.encode(script_override=(sig_index == i)) for i, tx_in in enumerate(self.tx_ins)]
+      ret += [tx_in.encode(script_override=(sig_idx == i)) for i, tx_in in enumerate(self.tx_ins)]
 
     ret += [encode_varint(len(self.tx_outs))]
     ret += [tx_out.encode() for tx_out in self.tx_outs]
     ret += [encode_int(self.locktime, 4)]
-    ret += [encode_int(1, 4) if sig_index != -1 else b'']
+    ret += [encode_int(1, 4) if sig_idx != -1 else b'']
 
     return b''.join(ret)

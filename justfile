@@ -23,3 +23,6 @@ install-editable:
 
 compile:
 	./bin/compile
+
+sloc:
+  @cat src/*.py | sed '/^\s*$/d' | wc -l
