@@ -1,0 +1,38 @@
+#!/usr/bin/python3
+
+import os
+
+imports = [
+  'import base58',
+  'import hashlib',
+  'import random',
+  'from dataclasses import dataclass',
+  'from typing import List, Union',
+]
+
+def x(path):
+  with open(path, "r") as file:
+    for i, v in enumerate(file.readlines()):
+      v = v.strip()
+      if v == '':
+        continue
+      if not v.startswith('import') and not v.startswith('from'):
+        return i
+
+def compile(path, target):
+  f = open(target, 'w+')
+  f.write("#!/usr/bin/python3\n\n")
+  for i in imports:
+    f.write(i + "\n")
+  for root, dirs, files in os.walk(path, topdown=True):
+    for file in files:
+      if file == '__init__.py':
+        continue
+      f.write(f'\n# **** {file} ****\n\n')
+      with open(os.path.join(root, file), 'r') as buff:
+        for line in buff.readlines()[x(os.path.join(root, file)):]:
+          f.write(line)
+  f.close()
+
+if __name__ == '__main__':
+  compile('src', 'tx.py')

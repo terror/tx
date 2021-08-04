@@ -17,9 +17,9 @@ class PublicKey(Point):
     return hashlib.new('ripemd160', hashlib.new('sha256', ret).digest()).digest() if hash160 else ret
 
   def addr(self, net: str, compressed: bool) -> str:
-    hash          = self.encode(compressed = compressed, hash160 = True)
-    hash_version  = { 'main': b'\x00', 'test': b'\x6f' }[net] + hash
-    checksum      = hashlib.new('sha256', hashlib.new('sha256', hash_version).digest()).digest()[:4]
-    byte_addr     = hash_version + checksum
+    hash         = self.encode(compressed = compressed, hash160 = True)
+    hash_version = { 'main': b'\x00', 'test': b'\x6f' }[net] + hash
+    checksum     = hashlib.new('sha256', hashlib.new('sha256', hash_version).digest()).digest()[:4]
+    byte_addr    = hash_version + checksum
     return base58.b58encode(byte_addr)
 

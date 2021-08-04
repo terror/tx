@@ -4,6 +4,8 @@ from curve import Curve
 from generator import Generator
 from point import Point
 from public_key import PublicKey
+from script import Script
+from tx import TxIn, TxOut
 
 def main():
   curve     = Curve.new()
@@ -28,12 +30,40 @@ def main():
   print(f'public key: {(a_pk.x, a_pk.y)}')
   print(f'address: {a_addr}')
 
-  print(PublicKey.from_point(a_pk).encode(compressed=True, hash160=True).hex())
-
   print('\nCrypto ID 2:')
   print(f'private key: {b}')
   print(f'public key: {(b_pk.x, b_pk.y)}')
   print(f'address: {b_addr}')
+
+  # grab a new transaction input (this has hardcoded values)
+  tx_in = TxIn.new()
+
+  # first output will go to the second wallet
+  # send out 50k sats
+  tx_out1 = TxOut.new(
+    50000,
+    Script([118, 169, PublicKey.from_point(b_pk).encode(compressed=True, hash160=True), 136, 172])
+  )
+
+  # second output will go back to us (change)
+  # the diff is the miners fee
+  tx_out2 = TxOut.new(
+    47500,
+    Script([118, 169, PublicKey.from_point(a_pk).encode(compressed=True, hash160=True), 136, 172])
+  )
+
+  print('\nOutput 1 script:')
+  print(tx_out1.s_pk.encode().hex())
+
+  print('\nOutput 2 script:')
+  print(tx_out2.s_pk.encode().hex())
+
+  # create the transaction
+  tx = Tx(
+    version = 1,
+    tx_ins  = [tx_in],
+    tx_outs = [tx_out1, tx_out2]
+  )
 
 if __name__ == '__main__':
   main()

@@ -20,3 +20,6 @@ lock:
 
 install-editable:
   pipenv install -e .
+
+compile:
+	./bin/compile
